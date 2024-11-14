@@ -10,6 +10,7 @@ import {
 } from "../Strapi/strapi.server";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { FaCommentAlt } from "react-icons/fa";
 
 async function getStrapiData(searchParams: URLSearchParams) {
   try {
@@ -18,6 +19,7 @@ async function getStrapiData(searchParams: URLSearchParams) {
       getCategory(),
       getArticles({ category }),
     ]);
+    console.log("Articles", articles);
     return {
       articles,
       categories
@@ -72,7 +74,9 @@ export default function ArticlesList() {
       <div className="flex items-center gap-2">
         <button
           onClick={() => {
-            const updatedSearchParams = new URLSearchParams(searchParams.toString());
+            const updatedSearchParams = new URLSearchParams(
+              searchParams.toString(),
+            );
             updatedSearchParams.delete("category");
             setActiveCategory(null);
             setSearchParams(updatedSearchParams);
@@ -100,7 +104,7 @@ export default function ArticlesList() {
           <Link
             key={article.id}
             href={`/article/${article.slug}`}
-            className="mb-4 cursor-pointer rounded-2xl bg-blue-500 p-4 transition-all delay-150 ease-in-out hover:scale-105 "
+            className="mb-4 cursor-pointer rounded-2xl bg-blue-500 p-4 transition-all delay-150 ease-in-out hover:scale-105"
           >
             {article.cover && (
               <Image
@@ -119,6 +123,11 @@ export default function ArticlesList() {
             <p>{article.description}</p>
             {article.author && <p>{article.author.name}</p>}
             {article.category && <p>{article.category.name}</p>}
+            <div className="flex items-center gap-2">
+              <FaCommentAlt />
+              {article.comments ? article.comments.length : 0}
+            </div>
+            
           </Link>
         ))}
       </div>

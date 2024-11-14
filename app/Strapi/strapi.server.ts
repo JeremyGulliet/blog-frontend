@@ -1,42 +1,10 @@
 import qs from "qs";
-import { z } from "zod";
-
-export const articleSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  description: z.string(),
-  slug: z.string().optional().nullable(),
-  cover: z
-    .object({
-      url: z.string(),
-      alternativeText: z.string().optional(),
-      width: z.number(),
-      height: z.number(),
-    })
-    .optional()
-    .nullable(),
-  author: z
-    .object({
-      name: z.string(),
-      email: z.string(),
-    })
-    .optional()
-    .nullable(),
-  category: z
-    .object({
-      name: z.string(),
-    })
-    .optional()
-    .nullable(),
-});
-
-const articleListSchema = z.object({
-  data: z.array(articleSchema),
-});
-
-export const categoriesListSchema = z.array (z.object({
-  name: z.string()
-}))
+import {
+  articleSchema,
+  articleListSchema,
+  categoriesListSchema,
+  commentSchema,
+} from "@/lib/types/zodTypes";
 
 export const fetchStrapi = async ({
   resourceName,
@@ -116,47 +84,103 @@ export const fetchStrapi = async ({
   return jsonResponse;
 };
 
-
-export const getArticles = async ({ category }: { category: string | null }) => {
+export const getArticles = async ({
+  category,
+}: {
+  category: string | null;
+}) => {
   const jsonResponse = await fetchStrapi({
     resourceName: "articles",
     sort: ["id:desc"],
-    populate: ["cover", "author", "category"],
+    populate: ["cover", "author", "category", "comments"],
     pagination: { page: 1, pageSize: 100 },
-    filters: category ? {
-      category: {
-        name: {
-          $eqi: category
+    filters: category
+      ? {
+          category: {
+            name: {
+              $eqi: category,
+            },
+          },
         }
-      }
-    } : {},
+      : {},
     status: "published",
     method: "GET",
     noCache: true,
   });
+
   const { data: articles } = articleListSchema.parse(jsonResponse);
-  //console.log(articles);
   return articles;
- }
+};
 
- export const getArticlesBySlug = async (slug: string) => {
+export const getArticlesBySlug = async (slug: string) => {
   const jsonResponse = await fetchStrapi({
-    resourceName: `articles/${slug}`,
+    resourceName: `articles`,
+    filters: { slug: { $eq: slug } },
+    populate: ["cover", "author", "category", "comments"],
+    fields: ["title", "description", "updatedAt", "createdAt", "content", "slug"],
+    noCache: true,
   });
-   
-   //console.log("API Response:", jsonResponse);
-  const article = articleSchema.parse(jsonResponse.data);
+
+  const article = articleSchema.parse(jsonResponse.data[0]);
   return article;
- }
+};
 
-
- export const getCategory = async () => {
+export const getCategory = async () => {
   const jsonResponse = await fetchStrapi({
     resourceName: "categories",
     sort: ["id:desc"],
     fields: ["name"],
   });
-   
-   const categories = categoriesListSchema.parse(jsonResponse.data);
+
+  const categories = categoriesListSchema.parse(jsonResponse.data);
   return categories;
- }
+};
+
+export const createComment = async ({
+  articleSlug,
+  content,
+  author,
+}: {
+  articleSlug: string;
+  content: string;
+  author: string;
+}) => {
+  try {
+    // Récupérer l'article par son slug
+    const articleResponse = await fetchStrapi({
+      resourceName: "articles",
+      filters: { slug: { $eq: articleSlug } },
+      fields: ["documentId", "title", "description"],
+      noCache: true,
+    });
+
+    if (!articleResponse.data || articleResponse.data.length === 0) {
+      throw new Error("Article not found");
+    }
+
+    const article = articleSchema.parse(articleResponse.data[0]);
+    console.log("Article found:", article);
+    const documentId = article.documentId;
+
+    // Créer le commentaire avec le documentId de l'article
+    const jsonResponse = await fetchStrapi({
+      resourceName: "comments",
+      method: "POST",
+      body: {
+        article: documentId,
+        content,
+        author,
+      },
+      type: "content",
+      noCache: true,
+    });
+
+    const comment = commentSchema.parse(jsonResponse.data);
+    console.log("Comment created:", comment);
+
+    return comment;
+  } catch (error) {
+    console.error("Error creating comment:", error);
+    throw new Error("Failed to fetch from Strapi");
+  }
+};
