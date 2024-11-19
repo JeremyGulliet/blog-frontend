@@ -1,32 +1,33 @@
-"use client"
 
 import Link from "next/link";
 import { FaFacebook, FaInstagram, FaLinkedin } from "react-icons/fa";
 import ResponsiveMenu from "./ResponsiveMenu";
+import { Logo } from "@/components//layout/logo";
+import { HeaderProps } from "@/lib/types/zodTypes";
 
-export default function Header() {
-  const navBar = [
-    { href: "/", label: "Accueil" },
-    { href: "/article", label: "Tous les articles" },
-    { href: "/about", label: "A propos" },
-    { href: "/catégories", label: "Catégories" },
-  ];
+
+export async function Header({ data }: Readonly<HeaderProps>) {
+  const { logoText, navBar, socialLink } = data;
 
   return (
-    <header className="flex items-center justify-around gap-4 border-b-2 py-4 shadow-sm md:flex-row md:gap-8 fixed z-50 w-full bg-white">
+    <header className="fixed z-50 flex w-full items-center justify-around gap-4 border-b-2 bg-white py-4 shadow-sm md:flex-row md:gap-8">
       {/* Menu réactif visible seulement sur les écrans inférieurs à xl */}
       <div className="xl:hidden">
-        <ResponsiveMenu />
+        <ResponsiveMenu
+          navBar={navBar}
+          socialLink={socialLink}
+          logoText={logoText}
+        />
       </div>
       <div>
-        <h1 className="text-2xl font-bold">Mon blog</h1>
+        <Logo text={logoText.text} />
       </div>
       <div className="hidden items-center xl:flex">
         <nav className="flex">
           <ul className="flex flex-col items-center gap-4 md:flex-row md:gap-10">
-            {navBar.map(({ href, label }) => (
-              <li key={href} className="text-xl hover:underline">
-                <Link href={href}>{label}</Link>
+            {navBar.map((link) => (
+              <li key={link.id} className="text-xl hover:underline">
+                <Link href={link.url}>{link.text}</Link>
               </li>
             ))}
           </ul>
@@ -34,27 +35,32 @@ export default function Header() {
       </div>
       <div>
         <div className="flex items-center gap-4">
-          <Link
-            href="https://www.facebook.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <FaFacebook size={20} />
-          </Link>
-          <Link
-            href="https://www.instagram.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <FaInstagram size={20} />
-          </Link>
-          <Link
-            href="https://www.linkedin.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <FaLinkedin size={20} />
-          </Link>
+          {socialLink.map((link) => {
+            let Icon;
+            switch (link.text.toLowerCase()) {
+              case "facebook":
+                Icon = FaFacebook;
+                break;
+              case "instagram":
+                Icon = FaInstagram;
+                break;
+              case "linkedin":
+                Icon = FaLinkedin;
+                break;
+              default:
+                return null;
+            }
+            return (
+              <Link
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon className="text-xl" />
+              </Link>
+            );
+          })}
         </div>
       </div>
     </header>

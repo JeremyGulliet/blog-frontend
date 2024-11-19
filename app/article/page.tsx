@@ -1,106 +1,89 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Image from "next/image";
-import {
-  getArticles,
-  articleSchema,
-  getCategory,
-  categoriesListSchema,
-} from "../Strapi/strapi.server";
+import { getArticles, getCategory } from "../Strapi/strapi.server";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { FaCommentAlt } from "react-icons/fa";
+import { Search } from "@/components/search";
+import { PaginationComponent } from "@/components/pagination-component";
 
-async function getStrapiData(searchParams: URLSearchParams) {
+async function getStrapiData(
+  category?: string | null,
+  query?: string | null,
+  page: number = 1,
+) {
   try {
-    const category = searchParams.get("category");
-    const [categories, articles] = await Promise.all([
+    const [categories, articlesData] = await Promise.all([
       getCategory(),
-      getArticles({ category }),
+      getArticles({
+        category: category ?? null,
+        query: query ?? null,
+        currentPage: page,
+      }),
     ]);
-    console.log("Articles", articles);
     return {
-      articles,
-      categories
+      articles: articlesData.articles,
+      categories,
+      meta: articlesData.meta,
     };
   } catch (error) {
     console.error("Error fetching data:", error);
-    return [];
+    return {
+      articles: [],
+      categories: [],
+      meta: { pagination: { page: 1, pageSize: 4, pageCount: 1, total: 0 } },
+    };
   }
- 
 }
 
-export default function ArticlesList() {
-  const [strapiDataArticles, setStrapiDataArticles] = useState<
-    (typeof articleSchema._type)[]
-    >([]);
-  const [categoriesData, setCategoriesData] = useState<
-    typeof categoriesListSchema._type
-  >([]);
-  const searchParams = useSearchParams();
-  const setSearchParams = (params: URLSearchParams) => {
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
-    window.history.pushState({}, "", newUrl);
+export default async function ArticlesList({
+  searchParams,
+}: {
+  searchParams: {
+    page?: string;
+    category?: string;
+    query?: string;
   };
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+}) {
+  const currentPage = Number(searchParams?.page) || 1;
+  const { articles, categories, meta } = await getStrapiData(
+    searchParams.category,
+    searchParams.query,
+    currentPage,
+  );
 
-  const categoryClicked = (cat: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("category", cat);
-    setActiveCategory(cat);
-    setSearchParams(params);
-  };
-
-  useEffect(() => {
-    async function fetchData() {
-      const data = await getStrapiData(searchParams);
-      if (Array.isArray(data)) {
-        setStrapiDataArticles([]);
-        setCategoriesData([]);
-      } else {
-        setStrapiDataArticles(data.articles);
-        setCategoriesData(data.categories);
-      }
-    }
-    fetchData();
-  }, [searchParams]);
+  const activeCategory = searchParams.category || null;
 
   return (
     <div className="flex flex-col items-center justify-center gap-4">
       <div>
         <h1 className="text-2xl">Articles</h1>
       </div>
+      <div className="w-4/6">
+        <Search />
+      </div>
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => {
-            const updatedSearchParams = new URLSearchParams(
-              searchParams.toString(),
-            );
-            updatedSearchParams.delete("category");
-            setActiveCategory(null);
-            setSearchParams(updatedSearchParams);
-          }}
-          type="button"
+        <Link
+          href="/article"
           className={`text-blue-950 ${activeCategory === null ? "text-red-600" : ""}`}
         >
           Toutes les catégories
-        </button>
-        {categoriesData.map((cat) => {
-          return (
-            <button
-              key={cat.name}
-              onClick={() => categoryClicked(cat.name)}
-              type="button"
-              className={`text-blue-950 ${activeCategory === cat.name ? "text-red-600" : ""}`}
-            >
-              {cat.name}
-            </button>
-          );
-        })}
+        </Link>
+
+        {categories.map((cat) => (
+          <Link
+            key={cat.name}
+            href={`/article?category=${cat.name}`}
+            className={`text-blue-950 ${
+              activeCategory === cat.name ? "text-red-600" : ""
+            }`}
+          >
+            {cat.name}
+          </Link>
+        ))}
       </div>
+
       <div className="flex flex-wrap items-center justify-center gap-4">
-        {strapiDataArticles.map((article) => (
+        {articles.map((article) => (
           <Link
             key={article.id}
             href={`/article/${article.slug}`}
@@ -127,9 +110,11 @@ export default function ArticlesList() {
               <FaCommentAlt />
               {article.comments ? article.comments.length : 0}
             </div>
-            
           </Link>
         ))}
+      </div>
+      <div className="mb-6">
+        <PaginationComponent pageCount={meta.pagination.pageCount} />
       </div>
     </div>
   );

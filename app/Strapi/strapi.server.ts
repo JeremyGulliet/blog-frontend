@@ -55,30 +55,36 @@ export const fetchStrapi = async ({
     },
   );
 
-  const response = await fetch(
-    `http://localhost:1337/api/${resourceName}?${urlParams}`,
-    {
-      method,
-      body:
-        method !== "GET"
-          ? JSON.stringify(
-              type === "content"
-                ? {
-                    data: body,
-                  }
-                : body,
-            )
-          : undefined,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": noCache ? "no-store" : "default",
-        ...headers,
-      },
+  const url = `http://localhost:1337/api/${resourceName}?${urlParams}`;
+  //console.log(`Fetching from Strapi: ${url}`);
+
+  const response = await fetch(url, {
+    method,
+    body:
+      method !== "GET"
+        ? JSON.stringify(
+            type === "content"
+              ? {
+                  data: body,
+                }
+              : body,
+          )
+        : undefined,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": noCache ? "no-store" : "default",
+      ...headers,
     },
-  );
+  });
 
   if (response.status !== 200 && response.status !== 201) {
-    throw new Error("Failed to fetch from Strapi");
+    const errorText = await response.text();
+    console.error(
+      `Error fetching from Strapi: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+    throw new Error(
+      `Failed to fetch from Strapi: ${response.status} ${response.statusText} - ${errorText}`,
+    );
   }
   const jsonResponse = await response.json();
   return jsonResponse;
@@ -86,30 +92,70 @@ export const fetchStrapi = async ({
 
 export const getArticles = async ({
   category,
+  query,
+  currentPage,
 }: {
   category: string | null;
+  query?: string | null;
+  currentPage: number;
 }) => {
+  const filters: {
+    category?: { name: { $eqi: string } };
+    $or?: Array<
+      | { title: { $containsi: string } }
+      | { description: { $containsi: string } }
+    >;
+  } = {};
+
+  if (category) {
+    filters.category = {
+      name: {
+        $eqi: category,
+      },
+    };
+  }
+
+  if (query) {
+    filters.$or = [
+      {
+        title: {
+          $containsi: query,
+        },
+      },
+      {
+        description: {
+          $containsi: query,
+        },
+      },
+    ];
+  }
+
+  const PAGE_SIZE = 6;
+
   const jsonResponse = await fetchStrapi({
     resourceName: "articles",
     sort: ["id:desc"],
     populate: ["cover", "author", "category", "comments"],
-    pagination: { page: 1, pageSize: 100 },
-    filters: category
-      ? {
-          category: {
-            name: {
-              $eqi: category,
-            },
-          },
-        }
-      : {},
+    filters,
+    pagination: {
+      pageSize: PAGE_SIZE,
+      page: currentPage,
+    },
     status: "published",
     method: "GET",
     noCache: true,
   });
 
   const { data: articles } = articleListSchema.parse(jsonResponse);
-  return articles;
+  const meta = jsonResponse.meta;
+  console.dir(meta);
+
+  return {
+    articles,
+    meta: {
+      pagination: jsonResponse.meta.pagination,
+    },
+  };
 };
 
 export const getArticlesBySlug = async (slug: string) => {
@@ -117,7 +163,14 @@ export const getArticlesBySlug = async (slug: string) => {
     resourceName: `articles`,
     filters: { slug: { $eq: slug } },
     populate: ["cover", "author", "category", "comments"],
-    fields: ["title", "description", "updatedAt", "createdAt", "content", "slug"],
+    fields: [
+      "title",
+      "description",
+      "updatedAt",
+      "createdAt",
+      "content",
+      "slug",
+    ],
     noCache: true,
   });
 
@@ -184,3 +237,59 @@ export const createComment = async ({
     throw new Error("Failed to fetch from Strapi");
   }
 };
+
+export const getHomePageData = async () => {
+  try {
+    const homePageData = await fetchStrapi({
+      resourceName: "home-page",
+      populate: [
+        "blocks",
+        "blocks.image",
+        "blocks.link",
+        "blocks.feature",
+        "blocks.feature.image.data",
+        "blocks.feature.image.data.attributes",
+      ],
+      noCache: true,
+    });
+    return homePageData;
+  } catch (error) {
+    console.error("Erreur lors de la récupération des données:", error);
+    throw error;
+  }
+};
+
+export const getGlobalData = async () => {
+  try {
+    const globalData = await fetchStrapi({
+      resourceName: "global",
+      populate: [
+        "header.logoText",
+        "header.navBar",
+        "header.socialLink",
+        "footer.logoText",
+        "footer.socialLink",
+      ],
+      noCache: true,
+    });
+    return globalData;
+  } catch (error) {
+    console.error("Erreur lors de la récupération des données:", error);
+    throw error;
+  }
+};
+
+export const getGlobalPageMetadata = async () => {
+  try {
+    const metadata = await fetchStrapi({
+      resourceName: "global",
+      populate: ["favicon", "defaultSeo", "defaultSeo.shareImage"],
+      fields: ["siteName", "siteDescription"],
+      noCache: true,
+    });
+    return metadata;
+  } catch (error) {
+    console.error("Erreur lors de la récupération des données:", error);
+    throw error;
+  }
+}
