@@ -1,10 +1,9 @@
 import React from "react";
-import Image from "next/image";
 import { getArticles, getCategory } from "../Strapi/strapi.server";
-import Link from "next/link";
-import { FaCommentAlt } from "react-icons/fa";
 import { Search } from "@/components/search";
-import { PaginationComponent } from "@/components/pagination-component";
+import { ArticleCardComponent } from "@/components/article/all/article-card";
+import { NumberedPagination } from "@/components/NumberedPagination";
+import { CategoryBadge } from "@/components/Category-badge";
 
 async function getStrapiData(
   category?: string | null,
@@ -54,67 +53,28 @@ export default async function ArticlesList({
   const activeCategory = searchParams.category || null;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <div>
-        <h1 className="text-2xl">Articles</h1>
+    <div className="container mx-auto flex min-h-full flex-col items-center justify-center gap-3 px-2 py-4 sm:gap-4 sm:px-4 sm:py-8">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {activeCategory && <CategoryBadge name="clear" />}
+        {categories.map((cat) => (
+          <CategoryBadge
+            key={cat.name}
+            name={cat.name}
+            isActive={activeCategory === cat.name}
+          />
+        ))}
       </div>
-      <div className="w-4/6">
+      <div className="w-full sm:w-4/6">
         <Search />
       </div>
-      <div className="flex items-center gap-2">
-        <Link
-          href="/article"
-          className={`text-blue-950 ${activeCategory === null ? "text-red-600" : ""}`}
-        >
-          Toutes les catégories
-        </Link>
-
-        {categories.map((cat) => (
-          <Link
-            key={cat.name}
-            href={`/article?category=${cat.name}`}
-            className={`text-blue-950 ${
-              activeCategory === cat.name ? "text-red-600" : ""
-            }`}
-          >
-            {cat.name}
-          </Link>
-        ))}
+      <div className="hidden w-full overflow-x-auto sm:block">
+        <NumberedPagination pageCount={meta.pagination.pageCount} />
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-4">
-        {articles.map((article) => (
-          <Link
-            key={article.id}
-            href={`/article/${article.slug}`}
-            className="mb-4 cursor-pointer rounded-2xl bg-blue-500 p-4 transition-all delay-150 ease-in-out hover:scale-105"
-          >
-            {article.cover && (
-              <Image
-                src={
-                  article.cover.url.startsWith("/")
-                    ? `http://localhost:1337${article.cover.url}`
-                    : article.cover.url
-                }
-                alt={article.cover.alternativeText || ""}
-                width={article.cover.width}
-                height={article.cover.height}
-                className="w-96 rounded-2xl"
-              />
-            )}
-            <h1>{article.title}</h1>
-            <p>{article.description}</p>
-            {article.author && <p>{article.author.name}</p>}
-            {article.category && <p>{article.category.name}</p>}
-            <div className="flex items-center gap-2">
-              <FaCommentAlt />
-              {article.comments ? article.comments.length : 0}
-            </div>
-          </Link>
-        ))}
-      </div>
-      <div className="mb-6">
-        <PaginationComponent pageCount={meta.pagination.pageCount} />
+      <ArticleCardComponent articles={articles} />
+
+      <div className="hidden w-full overflow-x-auto sm:block">
+        <NumberedPagination pageCount={meta.pagination.pageCount} />
       </div>
     </div>
   );

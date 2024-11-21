@@ -8,7 +8,7 @@ export function MenuButton({ children, content }: { children: React.ReactNode; c
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger>{children}</SheetTrigger>
-      <SheetContent side="left" className="bg-black">
+      <SheetContent side="left" className="bg-gray-900">
         {content}
       </SheetContent>
     </Sheet>

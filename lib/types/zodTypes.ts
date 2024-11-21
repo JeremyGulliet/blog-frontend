@@ -5,6 +5,7 @@ export const commentSchema = z.object({
   id: z.number(),
   content: z.string(),
   author: z.string(),
+  isReply: z.boolean().optional().nullable(),
   documentId: z.string(),
   createdAt: z.string(),
   updatedAt: z.string().optional().nullable(),
@@ -57,62 +58,58 @@ const listSchema = z.object({
   ),
 });
 
+const imageFormatSchema = z.object({
+  name: z.string(),
+  hash: z.string(),
+  ext: z.string(),
+  mime: z.string(),
+  path: z.string().nullable(),
+  width: z.number(),
+  height: z.number(),
+  size: z.number(),
+  url: z.string(),
+});
+
 const imageSchema = z.object({
   type: z.literal("image"),
   image: z.object({
     name: z.string(),
-    alternativeText: z.string().optional().nullable(),
+    alternativeText: z.string().nullable(),
     url: z.string(),
-    caption: z.string().optional().nullable(),
+    caption: z.string().nullable(),
     width: z.number(),
     height: z.number(),
     formats: z
       .object({
-        thumbnail: z
-          .object({
-            name: z.string(),
-            url: z.string(),
-            width: z.number(),
-            height: z.number(),
-            size: z.number(),
-          })
-          .optional()
-          .nullable(),
-        medium: z
-          .object({
-            name: z.string(),
-            url: z.string(),
-            width: z.number(),
-            height: z.number(),
-            size: z.number(),
-          })
-          .optional()
-          .nullable(),
-        small: z
-          .object({
-            name: z.string(),
-            url: z.string(),
-            width: z.number(),
-            height: z.number(),
-            size: z.number(),
-          })
-          .optional()
-          .nullable(),
-        large: z
-          .object({
-            name: z.string(),
-            url: z.string(),
-            width: z.number(),
-            height: z.number(),
-            size: z.number(),
-          })
-          .optional()
-          .nullable(),
+        thumbnail: imageFormatSchema,
       })
-      .optional()
-      .nullable(),
+      .optional(),
+    hash: z.string(),
+    ext: z.string(),
+    mime: z.string(),
+    size: z.number(),
+    previewUrl: z.string().nullable(),
+    provider: z.string(),
+    provider_metadata: z.unknown().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
   }),
-  children: z.array(baseNodeSchema),
+  children: z.array(
+    z.object({
+      type: z.literal("text"),
+      text: z.string(),
+    }),
+  ),
+});
+
+const quoteSchema = z.object({
+  type: z.literal("quote"),
+  children: z.array(
+    z.object({
+      type: z.literal("text"),
+      text: z.string(),
+    }),
+  ),
 });
 
 // Schémas pour HeroSection
@@ -139,6 +136,8 @@ export const heroSectionPropsSchema = z.object({
   link: linkSchema,
 });
 
+
+
 // Export des schémas
 export const contentSchema = z.array(
   z.discriminatedUnion("type", [
@@ -146,8 +145,25 @@ export const contentSchema = z.array(
     paragraphSchema,
     listSchema,
     imageSchema,
+    quoteSchema,
   ]),
 );
+
+// Schéma pour le composant media
+const mediaComponentSchema = z.object({
+  __component: z.string(),
+  id: z.number(),
+  file: z.object({
+    id: z.number(),
+    documentId: z.string(),
+    name: z.string(),
+    alternativeText: z.string().nullable(),
+    caption: z.string().nullable(),
+    width: z.number(),
+    height: z.number(),
+    url: z.string(),
+  }).optional().nullable(),
+});
 
 export const articleSchema = z.object({
   id: z.number(),
@@ -158,6 +174,28 @@ export const articleSchema = z.object({
   updatedAt: z.string().optional().nullable(),
   publishedAt: z.string().optional().nullable(),
   createdAt: z.string().optional().nullable(),
+  blocks: z
+    .array(
+      z.discriminatedUnion("__component", [
+        z.object({
+          __component: z.literal("shared.texte"),
+          id: z.number(),
+          content: contentSchema,
+        }),
+        z.object({
+          __component: z.literal("shared.media"),
+          id: z.number(),
+          file: mediaComponentSchema.shape.file,
+        }),
+        z.object({
+          __component: z.literal("shared.slider"),
+          id: z.number(),
+          files: z.array(mediaComponentSchema.shape.file),
+        }),
+      ]),
+    )
+    .optional()
+    .nullable(),
   cover: z
     .object({
       url: z.string(),
@@ -171,6 +209,15 @@ export const articleSchema = z.object({
     .object({
       name: z.string(),
       email: z.string(),
+      avatar: z
+        .object({
+          url: z.string(),
+          alternativeText: z.string().nullable().optional(),
+          width: z.number(),
+          height: z.number(),
+        })
+        .optional()
+        .nullable(),
     })
     .optional()
     .nullable(),

@@ -12,7 +12,7 @@ export default function ResponsiveMenu({
   logoText,
 }: Readonly<ResponsiveMenuProps>) {
   const menuContent = (
-    <div className="flex h-full flex-col justify-between">
+    <div className="flex h-full flex-col justify-between ">
       <div>
         <div className="mb-8 mt-4 text-white">
           <Logo text={logoText.text} />
@@ -65,7 +65,7 @@ export default function ResponsiveMenu({
 
   return (
     <MenuButton content={menuContent}>
-      <MdMenuBook className="h-8 w-6" color="black" aria-label="Menu" />
+      <MdMenuBook className="h-8 w-6" color="white" aria-label="Menu" />
     </MenuButton>
   );
 }

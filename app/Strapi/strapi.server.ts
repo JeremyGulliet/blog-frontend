@@ -72,7 +72,8 @@ export const fetchStrapi = async ({
         : undefined,
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": noCache ? "no-store" : "default",
+      //Authorization: `Bearer ${process.env.STRAPI_API_TOKEN}`,
+      //"Cache-Control": noCache ? "no-store" : "default",
       ...headers,
     },
   });
@@ -97,9 +98,10 @@ export const getArticles = async ({
 }: {
   category: string | null;
   query?: string | null;
-  currentPage: number;
+    currentPage: number;
 }) => {
   const filters: {
+
     category?: { name: { $eqi: string } };
     $or?: Array<
       | { title: { $containsi: string } }
@@ -135,7 +137,7 @@ export const getArticles = async ({
   const jsonResponse = await fetchStrapi({
     resourceName: "articles",
     sort: ["id:desc"],
-    populate: ["cover", "author", "category", "comments"],
+    populate: ["cover", "author", "author.avatar", "category", "comments"],
     filters,
     pagination: {
       pageSize: PAGE_SIZE,
@@ -147,8 +149,8 @@ export const getArticles = async ({
   });
 
   const { data: articles } = articleListSchema.parse(jsonResponse);
-  const meta = jsonResponse.meta;
-  console.dir(meta);
+  //const meta = jsonResponse.meta;
+  //console.dir(meta);
 
   return {
     articles,
@@ -162,19 +164,24 @@ export const getArticlesBySlug = async (slug: string) => {
   const jsonResponse = await fetchStrapi({
     resourceName: `articles`,
     filters: { slug: { $eq: slug } },
-    populate: ["cover", "author", "category", "comments"],
-    fields: [
-      "title",
-      "description",
-      "updatedAt",
-      "createdAt",
-      "content",
-      "slug",
+    populate: [
+      "cover",
+      "author",
+      "author.avatar",
+      "category",
+      "comments",
+      "blocks",
+      "blocks.content",
+      "blocks.image",
+      "blocks.file",
+      "blocks.files",
     ],
     noCache: true,
   });
 
+  
   const article = articleSchema.parse(jsonResponse.data[0]);
+
   return article;
 };
 
@@ -183,6 +190,7 @@ export const getCategory = async () => {
     resourceName: "categories",
     sort: ["id:desc"],
     fields: ["name"],
+    noCache: true,
   });
 
   const categories = categoriesListSchema.parse(jsonResponse.data);
@@ -193,13 +201,14 @@ export const createComment = async ({
   articleSlug,
   content,
   author,
+  isReply = false,
 }: {
   articleSlug: string;
   content: string;
   author: string;
+  isReply?: boolean;
 }) => {
   try {
-    // Récupérer l'article par son slug
     const articleResponse = await fetchStrapi({
       resourceName: "articles",
       filters: { slug: { $eq: articleSlug } },
@@ -215,7 +224,7 @@ export const createComment = async ({
     console.log("Article found:", article);
     const documentId = article.documentId;
 
-    // Créer le commentaire avec le documentId de l'article
+    
     const jsonResponse = await fetchStrapi({
       resourceName: "comments",
       method: "POST",
@@ -223,14 +232,13 @@ export const createComment = async ({
         article: documentId,
         content,
         author,
+        isReply,
       },
       type: "content",
       noCache: true,
     });
 
     const comment = commentSchema.parse(jsonResponse.data);
-    console.log("Comment created:", comment);
-
     return comment;
   } catch (error) {
     console.error("Error creating comment:", error);

@@ -73,9 +73,9 @@ export default async function RootLayout({
   //console.dir(globalData, {depth: null});
   return (
     <html lang="en">
-      <body>
+      <body className="flex min-h-screen flex-col">
         <Header data={globalData.data.header} />
-        <div className="pt-16">{children}</div>
+        <main className="flex-grow pt-16">{children}</main>
         <Footer data={globalData.data.footer} />
       </body>
     </html>

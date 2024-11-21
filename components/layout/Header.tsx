@@ -10,7 +10,7 @@ export async function Header({ data }: Readonly<HeaderProps>) {
   const { logoText, navBar, socialLink } = data;
 
   return (
-    <header className="fixed z-50 flex w-full items-center justify-around gap-4 border-b-2 bg-white py-4 shadow-sm md:flex-row md:gap-8">
+    <header className="fixed z-50 flex w-full items-center justify-around gap-4 bg-gray-900 text-white py-4 shadow-sm md:flex-row md:gap-8">
       {/* Menu réactif visible seulement sur les écrans inférieurs à xl */}
       <div className="xl:hidden">
         <ResponsiveMenu

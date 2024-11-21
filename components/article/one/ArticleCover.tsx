@@ -13,7 +13,7 @@ export const ArticleCover = ({
   if (!cover) return null;
 
   return (
-    <div className="mb-4">
+    <div className="mb-4 px-2 sm:px-4">
       <Image
         src={
           cover.url.startsWith("/")
@@ -23,7 +23,7 @@ export const ArticleCover = ({
         alt={cover.alternativeText || ""}
         width={cover.width}
         height={cover.height}
-        className="w-full max-w-5xl rounded-2xl"
+        className="mx-auto w-full max-w-3xl rounded-xl sm:rounded-2xl"
       />
     </div>
   );
